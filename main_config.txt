@@ -1,0 +1,25 @@
+# ======================
+# XAXA SOLUTIONS CONFIG
+# ======================
+
+discord_webhook_url=https://discord.com/api/webhooks/1378498445869973534/SxscUsisu52Z14U4m8G01yP4ZiN4HPXn1i33yzGiO9y4Gtz8Y6RvpsYu_malMa20_OrX
+thumbnail_url=https://i.postimg.cc/d095ydNB/67fc0c77-3d4b-412b-bae6-4ef36378c6ab.png
+spam_iteration_delay=0
+spam_message_delay=5
+check_spambot=on
+check_spambot_delay=14400
+aggressive_spam=on
+ignore_small_groups=on
+min_group_members=50
+send_message_to_new_user=on
+welcome_message_delay=on
+welcome_delay_range=5-15
+batch_welcome_messages=on
+batch_welcome_interval=10-30
+hide_phone_number=on
+api_id=22027066
+api_hash=47e94b19860f0e9dc83ba50a85ab88cf
+phone_number=+48694586839
+spam_enabled=on
+discord_stats_auto=off
+discord_stats_interval_hours=6
