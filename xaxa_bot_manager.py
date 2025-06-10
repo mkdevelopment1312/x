@@ -86,6 +86,10 @@ class XAXABotManager:
         print("XAXABotManager - Interactive Login")
         print("==================================")
 
+        # Always ask for API ID and API HASH first
+        self.api_id = int(input("Enter your API ID: "))
+        self.api_hash = input("Enter your API Hash: ")
+
         # Check for existing sessions
         sessions = [f for f in os.listdir() if f.startswith('xaxa_manager_') and f.endswith('.session')]
 
@@ -789,11 +793,7 @@ class XAXABotManager:
 async def main():
     bot = XAXABotManager()
 
-    if not bot.api_id or not bot.api_hash:
-        print("API credentials not found in config. Please enter them now:")
-        bot.api_id = int(input("Enter your API ID: "))
-        bot.api_hash = input("Enter your API Hash: ")
-
+    # Always use interactive login to ensure proper sequence of credential input
     await bot.interactive_login()
 
     @bot.client.on(events.NewMessage(outgoing=True))

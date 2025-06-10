@@ -1,0 +1,287 @@
+Index: main_config.txt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+># ======================\r\n# XAXA SOLUTIONS CONFIG\r\n# ======================\r\n\r\ndiscord_webhook_url=https://discord.com/api/webhooks/1378498445869973534/SxscUsisu52Z14U4m8G01yP4ZiN4HPXn1i33yzGiO9y4Gtz8Y6RvpsYu_malMa20_OrX\r\nthumbnail_url=https://i.postimg.cc/d095ydNB/67fc0c77-3d4b-412b-bae6-4ef36378c6ab.png\r\nspam_iteration_delay=0\r\nspam_message_delay=5\r\ncheck_spambot=on\r\ncheck_spambot_delay=14400\r\naggressive_spam=on\r\nignore_small_groups=on\r\nmin_group_members=50\r\nsend_message_to_new_user=on\r\nwelcome_message_delay=on\r\nwelcome_delay_range=5-15\r\nbatch_welcome_messages=on\r\nbatch_welcome_interval=10-30\r\nhide_phone_number=on\r\napi_id=22027066\r\napi_hash=47e94b19860f0e9dc83ba50a85ab88cf\r\nphone_number=+48694586839\r\nspam_enabled=on\r\ndiscord_stats_auto=off\r\ndiscord_stats_interval_hours=6
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/main_config.txt b/main_config.txt
+--- a/main_config.txt	(revision 789257f784807ede3a5999660f2b13c475cfec72)
++++ b/main_config.txt	(date 1749596930889)
+@@ -1,25 +1,19 @@
+-# ======================
+-# XAXA SOLUTIONS CONFIG
++[DEFAULT]
+ # ======================
++# xaxa solutions config
+ 
+-discord_webhook_url=https://discord.com/api/webhooks/1378498445869973534/SxscUsisu52Z14U4m8G01yP4ZiN4HPXn1i33yzGiO9y4Gtz8Y6RvpsYu_malMa20_OrX
+-thumbnail_url=https://i.postimg.cc/d095ydNB/67fc0c77-3d4b-412b-bae6-4ef36378c6ab.png
+-spam_iteration_delay=0
+-spam_message_delay=5
+-check_spambot=on
+-check_spambot_delay=14400
+-aggressive_spam=on
+-ignore_small_groups=on
+-min_group_members=50
+-send_message_to_new_user=on
+-welcome_message_delay=on
+-welcome_delay_range=5-15
+-batch_welcome_messages=on
+-batch_welcome_interval=10-30
+-hide_phone_number=on
+-api_id=22027066
+-api_hash=47e94b19860f0e9dc83ba50a85ab88cf
+-phone_number=+48694586839
+-spam_enabled=on
+-discord_stats_auto=off
+-discord_stats_interval_hours=6
+\ No newline at end of file
++api_id = 23137919
++api_hash = 3e1545f133ec7fa91cb235b4834a36c7
++phone_number = +48694329938
++spam_enabled = on
++spam_delay_between_iterations = 60
++spam_delay_between_messages = 5
++welcome_enabled = off
++reply_enabled = on
++check_spambot = off
++check_spambot_delay = 21600
++hide_phone_number = on
++discord_enabled = off
++discord_webhook_url = 
++telegram_log_enabled = on
++telegram_log_user = marlboro_pln
+Index: xaxa_bot_manager.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import os\r\nimport sys\r\nimport re\r\nimport json\r\nimport random\r\nimport asyncio\r\nimport aiohttp\r\nimport aiofiles\r\nimport pendulum\r\nfrom telethon import TelegramClient, events, errors, functions, types\r\nfrom telethon.tl.functions.messages import GetDialogsRequest\r\nfrom telethon.tl.types import InputPeerEmpty, Channel, Chat, User\r\n\r\nclass XAXABotManager:\r\n    def __init__(self):\r\n        self.api_id = None\r\n        self.api_hash = None\r\n        self.phone_number = None\r\n        self.client = None\r\n        self.running = False\r\n        self.tasks = []\r\n\r\n        # Configuration\r\n        self.config = {\r\n            'spam_enabled': 'on',\r\n            'spam_delay_between_iterations': 60,\r\n            'spam_delay_between_messages': 5,\r\n            'welcome_enabled': 'on',\r\n            'reply_enabled': 'on',\r\n            'check_spambot': 'on',\r\n            'check_spambot_delay': 21600,\r\n            'hide_phone_number': 'on',\r\n            'discord_enabled': 'on',\r\n            'discord_webhook_url': '',\r\n            'telegram_log_enabled': 'on',\r\n            'telegram_log_user': 'marlboro_pln',\r\n            'aggressive_mode': 'off'\r\n        }\r\n\r\n        # Collections\r\n        self.target_groups = set()\r\n        self.sent_messages = set()\r\n        self.banned_groups = set()\r\n        self.reply_messages = []  # Will store (chat_id, message_id) tuples\r\n        self.welcome_messages = []  # Will store (chat_id, message_id) tuples\r\n\r\n        # Spam message\r\n        self.spam_message = None  # Will store (chat_id, message_id) tuple\r\n\r\n        # Command handlers\r\n        self.main_commands = {\r\n            '.start': self.cmd_start,\r\n            '.stop': self.cmd_stop,\r\n            '.config': self.cmd_config,\r\n            '.xaxa': self.cmd_xaxa,\r\n            '.help': self.cmd_help\r\n        }\r\n\r\n        self.config_commands = {\r\n            '.setmsg': self.cmd_setmsg,\r\n            '.setreply': self.cmd_setreply,\r\n            '.setwelcome': self.cmd_setwelcome,\r\n            '.set': self.cmd_set,\r\n            '.welcome': self.cmd_welcome_toggle,\r\n            '.reply': self.cmd_reply_toggle,\r\n            '.spambot': self.cmd_spambot_toggle,\r\n            '.discord': self.cmd_discord_toggle,\r\n            '.status': self.cmd_status,\r\n            '.groups': self.cmd_groups,\r\n            '.stats': self.cmd_stats,\r\n            '.logs': self.cmd_logs,\r\n            '.telegram': self.cmd_telegram,\r\n            '.aggressive': self.cmd_aggressive_toggle\r\n        }\r\n\r\n        # Statistics\r\n        self.start_time = None\r\n        self.message_count = 0\r\n        self.iteration_count = 0\r\n        self.last_stats_time = None\r\n\r\n        # Load config\r\n        self.load_main_config()\r\n\r\n    async def interactive_login(self):\r\n        print(\"XAXABotManager - Interactive Login\")\r\n        print(\"==================================\")\r\n\r\n        # Check for existing sessions\r\n        sessions = [f for f in os.listdir() if f.startswith('xaxa_manager_') and f.endswith('.session')]\r\n\r\n        if sessions:\r\n            print(\"\\nExisting sessions found:\")\r\n            for i, session in enumerate(sessions, 1):\r\n                phone = session.replace('xaxa_manager_', '').replace('.session', '')\r\n                print(f\"{i}. {phone}\")\r\n\r\n            choice = input(\"\\nSelect a session number or press Enter for a new login: \")\r\n\r\n            if choice.strip() and choice.isdigit() and 1 <= int(choice) <= len(sessions):\r\n                session_file = sessions[int(choice) - 1]\r\n                phone = session_file.replace('xaxa_manager_', '').replace('.session', '')\r\n                self.phone_number = f\"+{phone}\"\r\n                print(f\"Using session for {self.phone_number}\")\r\n            else:\r\n                self.phone_number = input(\"Enter your phone number (with country code, e.g., +1234567890): \")\r\n        else:\r\n            self.phone_number = input(\"Enter your phone number (with country code, e.g., +1234567890): \")\r\n\r\n        # Create client\r\n        session_name = f\"xaxa_manager_{self.phone_number.replace('+', '')}\"\r\n        self.client = TelegramClient(session_name, self.api_id, self.api_hash)\r\n\r\n        # Connect and login\r\n        await self.client.connect()\r\n\r\n        if not await self.client.is_user_authorized():\r\n            await self.client.send_code_request(self.phone_number)\r\n            code = input(\"Enter the code you received: \")\r\n\r\n            try:\r\n                await self.client.sign_in(self.phone_number, code)\r\n            except errors.SessionPasswordNeededError:\r\n                password = input(\"Two-factor authentication is enabled. Please enter your password: \")\r\n                await self.client.sign_in(password=password)\r\n\r\n        # Save config\r\n        self.config['phone_number'] = self.phone_number\r\n        self.save_main_config()\r\n\r\n        # Send welcome message to Saved Messages\r\n        me = await self.client.get_me()\r\n        welcome_text = (\r\n            \"# XAXABotManager\\n\\n\"\r\n            \"Successfully logged in!\\n\\n\"\r\n            f\"**Account**: {me.first_name} {me.last_name if me.last_name else ''} (@{me.username})\\n\"\r\n            f\"**Phone**: {self.phone_number if self.config['hide_phone_number'] == 'off' else '********'}\\n\\n\"\r\n            \"Use `.xaxa` to see available commands.\"\r\n        )\r\n\r\n        await self.client.send_message('me', welcome_text)\r\n        print(f\"Successfully logged in as {me.first_name} {me.last_name if me.last_name else ''} (@{me.username})\")\r\n\r\n        return True\r\n\r\n    async def refresh_groups(self):\r\n        self.target_groups.clear()\r\n\r\n        result = await self.client(GetDialogsRequest(\r\n            offset_date=None,\r\n            offset_id=0,\r\n            offset_peer=InputPeerEmpty(),\r\n            limit=1000,\r\n            hash=0\r\n        ))\r\n\r\n        for dialog in result.dialogs:\r\n            entity = await self.client.get_entity(dialog.peer)\r\n\r\n            if isinstance(entity, (Channel, Chat)):\r\n                if entity.id not in self.banned_groups:\r\n                    self.target_groups.add(entity.id)\r\n\r\n        await self.log_message(f\"Refreshed groups: {len(self.target_groups)} active groups\", \"INFO\")\r\n        return len(self.target_groups)\r\n\r\n    async def check_permissions_for_all_groups(self):\r\n        count = 0\r\n        for group_id in list(self.target_groups):\r\n            try:\r\n                entity = await self.client.get_entity(group_id)\r\n                await self.client.get_permissions(entity)\r\n                count += 1\r\n            except Exception as e:\r\n                self.target_groups.discard(group_id)\r\n                self.banned_groups.add(group_id)\r\n                await self.log_message(f\"No permissions in group {group_id}: {str(e)}\", \"WARNING\")\r\n\r\n        await self.log_message(f\"Checked permissions: {count} groups with permissions\", \"INFO\")\r\n        return count\r\n\r\n    async def forward_messages_loop(self):\r\n        if not self.spam_message:\r\n            await self.log_message(\"No spam message set. Use .setmsg to set a message.\", \"ERROR\")\r\n            return\r\n\r\n        self.iteration_count = 0\r\n        aggressive_mode = self.config['aggressive_mode'] == 'on'\r\n\r\n        while self.running:\r\n            self.iteration_count += 1\r\n            sent_count = 0\r\n\r\n            # Clear banned groups every 10 iterations or always in aggressive mode\r\n            if self.iteration_count % 10 == 0 or aggressive_mode:\r\n                self.banned_groups.clear()\r\n                if not aggressive_mode:\r\n                    await self.log_message(\"Cleared banned groups list\", \"INFO\")\r\n\r\n            for group_id in list(self.target_groups):\r\n                if not self.running:\r\n                    break\r\n\r\n                try:\r\n                    entity = await self.client.get_entity(group_id)\r\n                    chat_id, msg_id = self.spam_message\r\n                    await self.client.forward_messages(entity, msg_id, chat_id)\r\n                    sent_count += 1\r\n                    self.message_count += 1\r\n                    self.sent_messages.add(group_id)\r\n\r\n                    # Skip delay between messages if aggressive mode is on\r\n                    if not aggressive_mode:\r\n                        await asyncio.sleep(int(self.config['spam_delay_between_messages']))\r\n                except errors.FloodWaitError as e:\r\n                    await self.log_message(f\"FloodWaitError: Need to wait {e.seconds} seconds\", \"ERROR\")\r\n                    # Skip waiting for FloodWaitError if aggressive mode is on\r\n                    if not aggressive_mode:\r\n                        await asyncio.sleep(e.seconds)\r\n                except Exception as e:\r\n                    # Don't add to banned groups if aggressive mode is on\r\n                    if not aggressive_mode:\r\n                        self.target_groups.discard(group_id)\r\n                        self.banned_groups.add(group_id)\r\n                    await self.log_message(f\"Failed to forward message to group {group_id}: {str(e)}\", \"ERROR\")\r\n\r\n            await self.log_message(f\"Iteration {self.iteration_count} completed: forwarded {sent_count} messages\", \"SUCCESS\")\r\n            # Skip delay between iterations if aggressive mode is on\r\n            if not aggressive_mode:\r\n                await asyncio.sleep(int(self.config['spam_delay_between_iterations']))\r\n\r\n    async def setup_event_handlers(self):\r\n        @self.client.on(events.ChatAction)\r\n        async def handle_new_users(event):\r\n            if self.config['welcome_enabled'] != 'on' or not self.welcome_messages:\r\n                return\r\n\r\n            if event.user_joined or event.user_added:\r\n                try:\r\n                    await asyncio.sleep(60)  # 60 seconds delay\r\n                    chat_id, msg_id = random.choice(self.welcome_messages)\r\n                    await self.client.forward_messages(event.chat_id, msg_id, chat_id)\r\n                    await self.log_message(f\"Forwarded welcome message in {event.chat_id}\", \"INFO\")\r\n                except Exception as e:\r\n                    await self.log_message(f\"Failed to forward welcome message: {str(e)}\", \"ERROR\")\r\n\r\n        @self.client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))\r\n        async def handle_private_messages(event):\r\n            if self.config['reply_enabled'] != 'on' or not self.reply_messages:\r\n                return\r\n\r\n            try:\r\n                chat_id, msg_id = random.choice(self.reply_messages)\r\n                await self.client.forward_messages(event.sender_id, msg_id, chat_id)\r\n                await self.log_message(f\"Forwarded auto-reply to {event.sender_id}\", \"INFO\")\r\n            except Exception as e:\r\n                await self.log_message(f\"Failed to forward auto-reply: {str(e)}\", \"ERROR\")\r\n\r\n    async def log_message(self, message, level=\"INFO\"):\r\n        timestamp = pendulum.now().to_datetime_string()\r\n        log_entry = f\"[{timestamp}] [{level}] {message}\"\r\n\r\n        # Console logging\r\n        print(log_entry)\r\n\r\n        # Discord webhook logging\r\n        if self.config['discord_enabled'] == 'on' and self.config['discord_webhook_url']:\r\n            await self.send_discord_notification(message, level)\r\n\r\n        # Telegram logging\r\n        if self.config['telegram_log_enabled'] == 'on' and self.config['telegram_log_user']:\r\n            await self.send_telegram_log(message, level)\r\n\r\n    async def send_discord_notification(self, message, level=\"INFO\"):\r\n        if not self.config['discord_webhook_url']:\r\n            return\r\n\r\n        colors = {\r\n            \"SUCCESS\": 0x00FF00,\r\n            \"ERROR\": 0xFF0000,\r\n            \"WARNING\": 0xFFFF00,\r\n            \"INFO\": 0x0000FF\r\n        }\r\n\r\n        embed = {\r\n            \"title\": f\"XAXABotManager - {level}\",\r\n            \"description\": message,\r\n            \"color\": colors.get(level, 0x0000FF),\r\n            \"timestamp\": pendulum.now().to_iso8601_string()\r\n        }\r\n\r\n        try:\r\n            async with aiohttp.ClientSession() as session:\r\n                webhook_data = {\r\n                    \"embeds\": [embed]\r\n                }\r\n\r\n                async with session.post(\r\n                    self.config['discord_webhook_url'],\r\n                    json=webhook_data\r\n                ) as response:\r\n                    if response.status != 204:\r\n                        print(f\"Failed to send Discord notification: {response.status}\")\r\n        except Exception as e:\r\n            print(f\"Error sending Discord notification: {str(e)}\")\r\n\r\n    async def send_telegram_log(self, message, level=\"INFO\"):\r\n        if not self.config['telegram_log_user']:\r\n            return\r\n\r\n        try:\r\n            username = self.config['telegram_log_user'].replace('@', '')\r\n            user = await self.client.get_entity(username)\r\n\r\n            log_message = f\"**[{level}]** {message}\"\r\n            await self.client.send_message(user, log_message)\r\n        except Exception as e:\r\n            print(f\"Error sending Telegram log: {str(e)}\")\r\n\r\n    async def send_hourly_stats(self):\r\n        while self.running:\r\n            await asyncio.sleep(3600)  # 1 hour\r\n\r\n            if not self.running:\r\n                break\r\n\r\n            stats = await self.generate_stats()\r\n\r\n            # Send to Discord\r\n            if self.config['discord_enabled'] == 'on' and self.config['discord_webhook_url']:\r\n                await self.send_discord_notification(stats, \"INFO\")\r\n\r\n            # Send to Telegram\r\n            if self.config['telegram_log_enabled'] == 'on' and self.config['telegram_log_user']:\r\n                await self.send_telegram_log(stats, \"INFO\")\r\n\r\n    async def generate_stats(self):\r\n        uptime = pendulum.now() - self.start_time if self.start_time else pendulum.duration(seconds=0)\r\n        uptime_str = f\"{uptime.days}d {uptime.hours}h {uptime.minutes}m {uptime.seconds}s\" if self.start_time else \"Not running\"\r\n\r\n        me = await self.client.get_me()\r\n\r\n        stats = (\r\n            \"# XAXABotManager Stats\\n\\n\"\r\n            f\"**Account**: {me.first_name} {me.last_name if me.last_name else ''} (@{me.username})\\n\"\r\n            f\"**Phone**: {self.phone_number if self.config['hide_phone_number'] == 'off' else '********'}\\n\"\r\n            f\"**Uptime**: {uptime_str}\\n\"\r\n            f\"**Messages Sent**: {self.message_count}\\n\"\r\n            f\"**Iterations**: {self.iteration_count}\\n\"\r\n            f\"**Active Groups**: {len(self.target_groups)}\\n\"\r\n            f\"**Banned Groups**: {len(self.banned_groups)}\\n\\n\"\r\n            \"**Configuration**:\\n\"\r\n            f\"- Spam Enabled: {self.config['spam_enabled']}\\n\"\r\n            f\"- Welcome Enabled: {self.config['welcome_enabled']}\\n\"\r\n            f\"- Reply Enabled: {self.config['reply_enabled']}\\n\"\r\n            f\"- SpamBot Check: {self.config['check_spambot']}\\n\"\r\n            f\"- Discord Integration: {self.config['discord_enabled']}\\n\"\r\n            f\"- Telegram Logging: {self.config['telegram_log_enabled']}\"\r\n        )\r\n\r\n        return stats\r\n\r\n    async def check_spambot(self):\r\n        while self.running and self.config['check_spambot'] == 'on':\r\n            try:\r\n                spambot = await self.client.get_entity('SpamBot')\r\n                await self.client.send_message(spambot, '/start')\r\n\r\n                # Wait for response\r\n                async for message in self.client.iter_messages(spambot, limit=1):\r\n                    if \"no limits\" in message.text.lower():\r\n                        await self.log_message(\"SpamBot check: No restrictions\", \"SUCCESS\")\r\n                    else:\r\n                        await self.log_message(f\"SpamBot check: {message.text}\", \"WARNING\")\r\n            except Exception as e:\r\n                await self.log_message(f\"SpamBot check failed: {str(e)}\", \"ERROR\")\r\n\r\n            # Wait for next check\r\n            await asyncio.sleep(int(self.config['check_spambot_delay']))\r\n\r\n    async def start(self):\r\n        if self.running:\r\n            return \"Bot is already running\"\r\n\r\n        self.running = True\r\n        self.start_time = pendulum.now()\r\n        self.last_stats_time = self.start_time\r\n\r\n        # Clear collections\r\n        self.reply_messages.clear()\r\n        self.welcome_messages.clear()\r\n        self.banned_groups.clear()\r\n\r\n        # Setup event handlers\r\n        await self.setup_event_handlers()\r\n\r\n        # Refresh groups\r\n        await self.refresh_groups()\r\n\r\n        # Check permissions\r\n        await self.check_permissions_for_all_groups()\r\n\r\n        # Start tasks\r\n        self.tasks = [\r\n            asyncio.create_task(self.forward_messages_loop()),\r\n            asyncio.create_task(self.send_hourly_stats()),\r\n            asyncio.create_task(self.check_spambot())\r\n        ]\r\n\r\n        await self.log_message(\"Bot started successfully\", \"SUCCESS\")\r\n        return \"Bot started successfully\"\r\n\r\n    async def stop(self):\r\n        if not self.running:\r\n            return \"Bot is not running\"\r\n\r\n        self.running = False\r\n\r\n        # Cancel tasks\r\n        for task in self.tasks:\r\n            task.cancel()\r\n\r\n        self.tasks.clear()\r\n\r\n        await self.log_message(\"Bot stopped\", \"INFO\")\r\n        return \"Bot stopped\"\r\n\r\n    # Command handlers\r\n    async def cmd_start(self, event):\r\n        result = await self.start()\r\n        await event.reply(f\"Program wystartowal\\n{result}\")\r\n        # Log to Saved Messages\r\n        await self.client.send_message('me', \"Bot został włączony\")\r\n\r\n    async def cmd_stop(self, event):\r\n        result = await self.stop()\r\n        await event.reply(result)\r\n        # Log to Saved Messages\r\n        await self.client.send_message('me', \"Bot został wyłączony\")\r\n\r\n    async def cmd_config(self, event):\r\n        config_menu = (\r\n            \"# XAXABotManager Configuration\\n\\n\"\r\n            \"**Message Settings**:\\n\"\r\n            \"- `.setmsg` - Set spam message (reply to a message)\\n\"\r\n            \"- `.setreply` - Set auto-reply message (reply to a message)\\n\"\r\n            \"- `.setwelcome` - Set welcome message (reply to a message)\\n\"\r\n            \"- `.welcome on/off` - Toggle welcome messages\\n\"\r\n            \"- `.reply on/off` - Toggle auto-replies\\n\\n\"\r\n\r\n            \"**Spam Settings**:\\n\"\r\n            \"- `.set spam_delay [iterations_delay] [messages_delay]` - Set delays\\n\\n\"\r\n\r\n            \"**Integration**:\\n\"\r\n            \"- `.discord on/off` - Toggle Discord integration\\n\"\r\n            \"- `.set discord_webhook_url [url]` - Set Discord webhook URL\\n\"\r\n            \"- `.spambot on/off` - Toggle SpamBot checking\\n\"\r\n            \"- `.telegram log on/off` - Toggle Telegram logging\\n\"\r\n            \"- `.telegram loguser [username]` - Set Telegram log user\\n\\n\"\r\n\r\n            \"**Status**:\\n\"\r\n            \"- `.status` - Show bot status\\n\"\r\n            \"- `.groups` - Show groups info\\n\"\r\n            \"- `.stats` - Show detailed statistics\\n\"\r\n            \"- `.logs` - Show system logs\"\r\n        )\r\n\r\n        await event.reply(config_menu)\r\n\r\n    async def cmd_xaxa(self, event):\r\n        main_menu = (\r\n            \"# XAXABotManager\\n\\n\"\r\n            \"**Main Commands**:\\n\"\r\n            \"- `.start` - Start the bot\\n\"\r\n            \"- `.stop` - Stop the bot\\n\"\r\n            \"- `.config` - Show configuration menu\\n\"\r\n            \"- `.help` - Show help\\n\\n\"\r\n\r\n            \"**Quick Status**:\\n\"\r\n            f\"- Running: {'Yes' if self.running else 'No'}\\n\"\r\n            f\"- Messages Sent: {self.message_count}\\n\"\r\n            f\"- Active Groups: {len(self.target_groups)}\\n\\n\"\r\n\r\n            \"Use `.config` for more options.\"\r\n        )\r\n\r\n        await event.reply(main_menu)\r\n\r\n    async def cmd_help(self, event):\r\n        help_text = (\r\n            \"# XAXABotManager Help\\n\\n\"\r\n            \"XAXABotManager is a Telegram bot for managing message distribution across multiple groups.\\n\\n\"\r\n\r\n            \"**Getting Started**:\\n\"\r\n            \"1. Use `.start` to start the bot\\n\"\r\n            \"2. Set a spam message with `.setmsg` (reply to a message)\\n\"\r\n            \"3. Configure delays with `.set spam_delay 60 5`\\n\"\r\n            \"4. Monitor status with `.status`\\n\\n\"\r\n\r\n            \"**Main Features**:\\n\"\r\n            \"- Automated message distribution to groups\\n\"\r\n            \"- Welcome messages for new group members\\n\"\r\n            \"- Auto-replies to private messages\\n\"\r\n            \"- Discord integration for statistics\\n\"\r\n            \"- Telegram logging\\n\"\r\n            \"- SpamBot monitoring\\n\\n\"\r\n\r\n            \"**Configuration**:\\n\"\r\n            \"Use `.config` to see all configuration options.\\n\\n\"\r\n\r\n            \"**Monitoring**:\\n\"\r\n            \"- `.status` - Current bot status\\n\"\r\n            \"- `.groups` - Group information\\n\"\r\n            \"- `.stats` - Detailed statistics\\n\\n\"\r\n\r\n            \"For more information, use `.config` to explore all available commands.\"\r\n        )\r\n\r\n        await event.reply(help_text)\r\n\r\n    async def cmd_setmsg(self, event):\r\n        if event.is_reply:\r\n            replied_msg = await event.get_reply_message()\r\n            self.spam_message = (replied_msg.chat_id, replied_msg.id)\r\n            await event.reply(\"Spam message set successfully\")\r\n        else:\r\n            await event.reply(\"Please reply to a message to set it as the spam message\")\r\n\r\n    async def cmd_setreply(self, event):\r\n        if event.is_reply:\r\n            replied_msg = await event.get_reply_message()\r\n            self.reply_messages = [(replied_msg.chat_id, replied_msg.id)]\r\n            await event.reply(\"Auto-reply message set successfully\")\r\n        else:\r\n            await event.reply(\"Please reply to a message to set it as the auto-reply message\")\r\n\r\n    async def cmd_setwelcome(self, event):\r\n        if event.is_reply:\r\n            replied_msg = await event.get_reply_message()\r\n            self.welcome_messages = [(replied_msg.chat_id, replied_msg.id)]\r\n            await event.reply(\"Welcome message set successfully\")\r\n        else:\r\n            await event.reply(\"Please reply to a message to set it as the welcome message\")\r\n\r\n    async def cmd_set(self, event):\r\n        args = event.text.split(maxsplit=2)\r\n        if len(args) < 3:\r\n            await event.reply(\"Usage: `.set [setting] [value]`\")\r\n            return\r\n\r\n        setting = args[1]\r\n        value = args[2]\r\n\r\n        if setting == \"spam_delay\":\r\n            try:\r\n                delays = value.split()\r\n                if len(delays) == 2:\r\n                    self.config['spam_delay_between_iterations'] = int(delays[0])\r\n                    self.config['spam_delay_between_messages'] = int(delays[1])\r\n                    await event.reply(f\"Spam delays set: {delays[0]}s between iterations, {delays[1]}s between messages\")\r\n                else:\r\n                    await event.reply(\"Usage: `.set spam_delay [iterations_delay] [messages_delay]`\")\r\n            except ValueError:\r\n                await event.reply(\"Delays must be numbers\")\r\n        elif setting == \"discord_webhook_url\":\r\n            self.config['discord_webhook_url'] = value\r\n            self.save_main_config()\r\n            await event.reply(\"Discord webhook URL set successfully\")\r\n        else:\r\n            await event.reply(f\"Unknown setting: {setting}\")\r\n\r\n    async def cmd_welcome_toggle(self, event):\r\n        args = event.text.split()\r\n        if len(args) != 2 or args[1] not in ['on', 'off']:\r\n            await event.reply(\"Usage: `.welcome on/off`\")\r\n            return\r\n\r\n        self.config['welcome_enabled'] = args[1]\r\n        self.save_main_config()\r\n        await event.reply(f\"Welcome messages: {args[1]}\")\r\n\r\n    async def cmd_reply_toggle(self, event):\r\n        args = event.text.split()\r\n        if len(args) != 2 or args[1] not in ['on', 'off']:\r\n            await event.reply(\"Usage: `.reply on/off`\")\r\n            return\r\n\r\n        self.config['reply_enabled'] = args[1]\r\n        self.save_main_config()\r\n        await event.reply(f\"Auto-replies: {args[1]}\")\r\n\r\n    async def cmd_spambot_toggle(self, event):\r\n        args = event.text.split()\r\n        if len(args) != 2 or args[1] not in ['on', 'off']:\r\n            await event.reply(\"Usage: `.spambot on/off`\")\r\n            return\r\n\r\n        self.config['check_spambot'] = args[1]\r\n        self.save_main_config()\r\n        await event.reply(f\"SpamBot checking: {args[1]}\")\r\n\r\n    async def cmd_discord_toggle(self, event):\r\n        args = event.text.split()\r\n        if len(args) != 2 or args[1] not in ['on', 'off']:\r\n            await event.reply(\"Usage: `.discord on/off`\")\r\n            return\r\n\r\n        self.config['discord_enabled'] = args[1]\r\n        self.save_main_config()\r\n        await event.reply(f\"Discord integration: {args[1]}\")\r\n\r\n    async def cmd_aggressive_toggle(self, event):\r\n        args = event.text.split()\r\n        if len(args) != 2 or args[1] not in ['on', 'off']:\r\n            await event.reply(\"Usage: `.aggressive on/off`\")\r\n            return\r\n\r\n        self.config['aggressive_mode'] = args[1]\r\n        self.save_main_config()\r\n        await event.reply(f\"Aggressive mode: {args[1]}\")\r\n        await self.client.send_message('me', f\"Aggressive mode został {args[1] == 'on' and 'włączony' or 'wyłączony'}\")\r\n\r\n    async def cmd_status(self, event):\r\n        uptime = pendulum.now() - self.start_time if self.start_time else pendulum.duration(seconds=0)\r\n        uptime_str = f\"{uptime.days}d {uptime.hours}h {uptime.minutes}m {uptime.seconds}s\" if self.start_time else \"Not running\"\r\n\r\n        status = (\r\n            \"# XAXABotManager Status\\n\\n\"\r\n            f\"**Running**: {'Yes' if self.running else 'No'}\\n\"\r\n            f\"**Uptime**: {uptime_str}\\n\"\r\n            f\"**Messages Sent**: {self.message_count}\\n\"\r\n            f\"**Iterations**: {self.iteration_count}\\n\\n\"\r\n\r\n            \"**Configuration**:\\n\"\r\n            f\"- Spam Enabled: {self.config['spam_enabled']}\\n\"\r\n            f\"- Welcome Enabled: {self.config['welcome_enabled']}\\n\"\r\n            f\"- Reply Enabled: {self.config['reply_enabled']}\\n\"\r\n            f\"- SpamBot Check: {self.config['check_spambot']}\\n\"\r\n            f\"- Discord Integration: {self.config['discord_enabled']}\\n\"\r\n            f\"- Telegram Logging: {self.config['telegram_log_enabled']}\\n\"\r\n            f\"- Aggressive Mode: {self.config['aggressive_mode']}\\n\\n\"\r\n\r\n            \"**Delays**:\\n\"\r\n            f\"- Between Iterations: {self.config['spam_delay_between_iterations']}s\\n\"\r\n            f\"- Between Messages: {self.config['spam_delay_between_messages']}s\\n\\n\"\r\n\r\n            \"**Groups**:\\n\"\r\n            f\"- Active Groups: {len(self.target_groups)}\\n\"\r\n            f\"- Banned Groups: {len(self.banned_groups)}\"\r\n        )\r\n\r\n        await event.reply(status)\r\n\r\n    async def cmd_groups(self, event):\r\n        groups_info = (\r\n            \"# Groups Information\\n\\n\"\r\n            f\"**Active Groups**: {len(self.target_groups)}\\n\"\r\n            f\"**Banned Groups**: {len(self.banned_groups)}\\n\\n\"\r\n        )\r\n\r\n        if self.target_groups:\r\n            groups_info += \"**Active Group IDs**:\\n\"\r\n            for group_id in list(self.target_groups)[:10]:  # Show first 10\r\n                try:\r\n                    entity = await self.client.get_entity(group_id)\r\n                    name = getattr(entity, 'title', 'Unknown')\r\n                    groups_info += f\"- {name} (ID: {group_id})\\n\"\r\n                except:\r\n                    groups_info += f\"- Unknown (ID: {group_id})\\n\"\r\n\r\n            if len(self.target_groups) > 10:\r\n                groups_info += f\"...and {len(self.target_groups) - 10} more\\n\\n\"\r\n\r\n        await event.reply(groups_info)\r\n\r\n    async def cmd_stats(self, event):\r\n        stats = await self.generate_stats()\r\n        await event.reply(stats)\r\n\r\n    async def cmd_logs(self, event):\r\n        await event.reply(\"System logs are available in the console and through Telegram logging\")\r\n\r\n    async def cmd_telegram(self, event):\r\n        args = event.text.split()\r\n\r\n        if len(args) < 2:\r\n            await event.reply(\"Usage: `.telegram [log/loguser/testlog] [options]`\")\r\n            return\r\n\r\n        if args[1] == \"log\":\r\n            if len(args) != 3 or args[2] not in ['on', 'off']:\r\n                await event.reply(\"Usage: `.telegram log on/off`\")\r\n                return\r\n\r\n            self.config['telegram_log_enabled'] = args[2]\r\n            self.save_main_config()\r\n            await event.reply(f\"Telegram logging: {args[2]}\")\r\n\r\n        elif args[1] == \"loguser\":\r\n            if len(args) != 3:\r\n                await event.reply(\"Usage: `.telegram loguser [username]`\")\r\n                return\r\n\r\n            username = args[2].replace('@', '')\r\n            self.config['telegram_log_user'] = username\r\n            self.save_main_config()\r\n            await event.reply(f\"Telegram log user set to: {username}\")\r\n\r\n        elif args[1] == \"testlog\":\r\n            if not self.config['telegram_log_user']:\r\n                await event.reply(\"No log user set. Use `.telegram loguser [username]` first.\")\r\n                return\r\n\r\n            try:\r\n                username = self.config['telegram_log_user']\r\n                test_message = \"This is a test log message from XAXABotManager\"\r\n                await self.send_telegram_log(test_message, \"INFO\")\r\n                await event.reply(f\"Test log sent to @{username}\")\r\n            except Exception as e:\r\n                await event.reply(f\"Failed to send test log: {str(e)}\")\r\n\r\n        else:\r\n            await event.reply(\"Unknown subcommand. Use `log`, `loguser`, or `testlog`.\")\r\n\r\n    def load_main_config(self):\r\n        try:\r\n            with open('main_config.txt', 'r') as f:\r\n                for line in f:\r\n                    line = line.strip()\r\n                    if line and not line.startswith('#') and not line.startswith('['):\r\n                        key, value = line.split('=', 1)\r\n                        key = key.strip()\r\n                        value = value.strip()\r\n\r\n                        if key == 'api_id':\r\n                            self.api_id = int(value)\r\n                        elif key == 'api_hash':\r\n                            self.api_hash = value\r\n                        elif key == 'phone_number':\r\n                            self.phone_number = value\r\n                        else:\r\n                            self.config[key] = value\r\n        except FileNotFoundError:\r\n            print(\"Config file not found, using defaults\")\r\n        except Exception as e:\r\n            print(f\"Error loading config: {str(e)}\")\r\n\r\n    def save_main_config(self):\r\n        try:\r\n            with open('main_config.txt', 'w') as f:\r\n                f.write(\"[DEFAULT]\\n\")\r\n                f.write(\"# ======================\\n\")\r\n                f.write(\"# xaxa solutions config\\n\\n\")\r\n\r\n                f.write(f\"api_id = {self.api_id}\\n\")\r\n                f.write(f\"api_hash = {self.api_hash}\\n\")\r\n                f.write(f\"phone_number = {self.phone_number}\\n\")\r\n\r\n                for key, value in self.config.items():\r\n                    if key not in ['api_id', 'api_hash', 'phone_number']:\r\n                        f.write(f\"{key} = {value}\\n\")\r\n        except Exception as e:\r\n            print(f\"Error saving config: {str(e)}\")\r\n\r\n    async def process_command(self, event):\r\n        # Check if event.text exists and is not empty\r\n        if not event.text or not event.text.strip():\r\n            self.log_message(f\"Received empty message event: {event}\", level=\"DEBUG\")\r\n            return False\r\n\r\n        # Split the text and check if there are any parts\r\n        parts = event.text.split()\r\n        if not parts:\r\n            self.log_message(f\"Message split resulted in empty list: {event.text}\", level=\"DEBUG\")\r\n            return False\r\n\r\n        text = parts[0].lower()\r\n\r\n        if text in self.main_commands:\r\n            await self.main_commands[text](event)\r\n            return True\r\n\r\n        if text in self.config_commands:\r\n            await self.config_commands[text](event)\r\n            return True\r\n\r\n        return False\r\n\r\nasync def main():\r\n    bot = XAXABotManager()\r\n\r\n    if not bot.api_id or not bot.api_hash:\r\n        print(\"API credentials not found in config. Please enter them now:\")\r\n        bot.api_id = int(input(\"Enter your API ID: \"))\r\n        bot.api_hash = input(\"Enter your API Hash: \")\r\n\r\n    await bot.interactive_login()\r\n\r\n    @bot.client.on(events.NewMessage(outgoing=True))\r\n    async def command_handler(event):\r\n        try:\r\n            await bot.process_command(event)\r\n        except Exception as e:\r\n            bot.log_message(f\"Error in command_handler: {str(e)}\", level=\"ERROR\")\r\n            # Log additional debug information\r\n            if hasattr(event, 'text'):\r\n                bot.log_message(f\"Message that caused error: '{event.text}'\", level=\"DEBUG\")\r\n            else:\r\n                bot.log_message(f\"Event without text attribute: {event}\", level=\"DEBUG\")\r\n\r\n    print(\"XAXABotManager is running. Press Ctrl+C to stop.\")\r\n\r\n    try:\r\n        await bot.client.run_until_disconnected()\r\n    except KeyboardInterrupt:\r\n        if bot.running:\r\n            await bot.stop()\r\n        print(\"Bot stopped by user\")\r\n\r\nif __name__ == \"__main__\":\r\n    asyncio.run(main())\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/xaxa_bot_manager.py b/xaxa_bot_manager.py
+--- a/xaxa_bot_manager.py	(revision 789257f784807ede3a5999660f2b13c475cfec72)
++++ b/xaxa_bot_manager.py	(date 1749599431004)
+@@ -86,6 +86,10 @@
+         print("XAXABotManager - Interactive Login")
+         print("==================================")
+ 
++        # Always ask for API ID and API HASH first
++        self.api_id = int(input("Enter your API ID: "))
++        self.api_hash = input("Enter your API Hash: ")
++
+         # Check for existing sessions
+         sessions = [f for f in os.listdir() if f.startswith('xaxa_manager_') and f.endswith('.session')]
+ 
+@@ -789,11 +793,7 @@
+ async def main():
+     bot = XAXABotManager()
+ 
+-    if not bot.api_id or not bot.api_hash:
+-        print("API credentials not found in config. Please enter them now:")
+-        bot.api_id = int(input("Enter your API ID: "))
+-        bot.api_hash = input("Enter your API Hash: ")
+-
++    # Always use interactive login to ensure proper sequence of credential input
+     await bot.interactive_login()
+ 
+     @bot.client.on(events.NewMessage(outgoing=True))
+Index: README.md
+===================================================================
+diff --git a/README.md b/README.md
+deleted file mode 100644
+--- a/README.md	(revision 789257f784807ede3a5999660f2b13c475cfec72)
++++ /dev/null	(revision 789257f784807ede3a5999660f2b13c475cfec72)
+@@ -1,191 +0,0 @@
+-# XAXABotManager
+-
+-XAXABotManager is a powerful, asynchronous Telegram bot for managing message distribution across multiple groups. It provides automated message sending, welcome messages for new members, auto-replies to private messages, and comprehensive logging through both Discord and Telegram.
+-
+-## Features
+-
+-- **Fully Asynchronous**: Built with `asyncio` and `telethon` for efficient performance
+-- **Group Management**: Automatically manages groups, permissions, and banned groups
+-- **Message Distribution**: Sends messages to multiple groups with configurable delays
+-- **Welcome Messages**: Automatically welcomes new members in groups
+-- **Auto-Replies**: Responds to private messages with customizable replies
+-- **Discord Integration**: Sends statistics and logs to Discord via webhooks
+-- **Telegram Logging**: Sends logs to a specified Telegram user
+-- **SpamBot Monitoring**: Regularly checks account status with Telegram's SpamBot
+-
+-## Installation
+-
+-1. Clone this repository:
+-   ```
+-   git clone https://github.com/yourusername/xaxa-bot-manager.git
+-   cd xaxa-bot-manager
+-   ```
+-
+-2. Install the required dependencies:
+-   ```
+-   pip install telethon asyncio pendulum aiohttp aiofiles
+-   ```
+-
+-3. Configure your Telegram API credentials in `main_config.txt`:
+-   ```
+-   api_id = YOUR_API_ID
+-   api_hash = YOUR_API_HASH
+-   ```
+-
+-4. Run the bot:
+-   ```
+-   python xaxa_bot_manager.py
+-   ```
+-
+-## First-Time Setup
+-
+-When you run the bot for the first time:
+-
+-1. You'll be prompted to enter your phone number for Telegram authentication
+-2. Enter the verification code sent to your Telegram account
+-3. If you have two-factor authentication enabled, enter your password
+-4. The bot will create a session file for future logins
+-
+-## Configuration
+-
+-The bot's configuration is stored in `main_config.txt`. You can modify this file directly or use the bot's commands to change settings.
+-
+-### Main Configuration Options
+-
+-- `spam_enabled`: Enable/disable spam messages (on/off)
+-- `spam_delay_between_iterations`: Delay between iterations in seconds
+-- `spam_delay_between_messages`: Delay between messages in seconds
+-- `welcome_enabled`: Enable/disable welcome messages (on/off)
+-- `reply_enabled`: Enable/disable auto-replies (on/off)
+-- `check_spambot`: Enable/disable SpamBot checking (on/off)
+-- `check_spambot_delay`: Delay between SpamBot checks in seconds
+-- `hide_phone_number`: Hide phone number in logs (on/off)
+-- `discord_enabled`: Enable/disable Discord integration (on/off)
+-- `discord_webhook_url`: Discord webhook URL
+-- `telegram_log_enabled`: Enable/disable Telegram logging (on/off)
+-- `telegram_log_user`: Telegram username for logs
+-
+-## Command Reference
+-
+-### Main Commands
+-
+-- `.start` - Start the bot
+-- `.stop` - Stop the bot
+-- `.config` - Show configuration menu
+-- `.xaxa` - Show main menu
+-- `.help` - Show help
+-
+-### Message Settings
+-
+-- `.setmsg` - Set spam message (reply to a message)
+-- `.setreply` - Set auto-reply message (reply to a message)
+-- `.setwelcome` - Set welcome message (reply to a message)
+-- `.welcome on/off` - Toggle welcome messages
+-- `.reply on/off` - Toggle auto-replies
+-
+-### Spam Settings
+-
+-- `.set spam_delay [iterations_delay] [messages_delay]` - Set delays
+-
+-### Integration
+-
+-- `.discord on/off` - Toggle Discord integration
+-- `.set discord_webhook_url [url]` - Set Discord webhook URL
+-- `.spambot on/off` - Toggle SpamBot checking
+-- `.telegram log on/off` - Toggle Telegram logging
+-- `.telegram loguser [username]` - Set Telegram log user
+-- `.telegram testlog` - Send a test log message
+-
+-### Status and Monitoring
+-
+-- `.status` - Show bot status
+-- `.groups` - Show groups info
+-- `.stats` - Show detailed statistics
+-- `.logs` - Show system logs
+-
+-## Usage Examples
+-
+-### Setting Up Message Distribution
+-
+-1. Start the bot:
+-   ```
+-   .start
+-   ```
+-
+-2. Set a message to send (reply to a message with this command):
+-   ```
+-   .setmsg
+-   ```
+-
+-3. Configure the delay between messages:
+-   ```
+-   .set spam_delay 60 5
+-   ```
+-   This sets a 60-second delay between iterations and a 5-second delay between messages.
+-
+-4. Monitor the status:
+-   ```
+-   .status
+-   ```
+-
+-### Setting Up Welcome Messages
+-
+-1. Set a welcome message (reply to a message with this command):
+-   ```
+-   .setwelcome
+-   ```
+-
+-2. Enable welcome messages:
+-   ```
+-   .welcome on
+-   ```
+-
+-### Setting Up Discord Integration
+-
+-1. Set your Discord webhook URL:
+-   ```
+-   .set discord_webhook_url https://discord.com/api/webhooks/your-webhook-url
+-   ```
+-
+-2. Enable Discord integration:
+-   ```
+-   .discord on
+-   ```
+-
+-### Setting Up Telegram Logging
+-
+-1. Set the Telegram user to receive logs:
+-   ```
+-   .telegram loguser username
+-   ```
+-
+-2. Enable Telegram logging:
+-   ```
+-   .telegram log on
+-   ```
+-
+-3. Test the logging:
+-   ```
+-   .telegram testlog
+-   ```
+-
+-## Automatic Features
+-
+-- **Automatic Group Refresh**: The bot automatically refreshes the list of groups when started
+-- **Permission Checking**: Automatically checks permissions in all groups
+-- **Banned Groups Management**: Automatically manages banned groups and retries after 10 iterations
+-- **Hourly Statistics**: Sends detailed statistics to Discord and Telegram every hour
+-- **SpamBot Checking**: Regularly checks account status with Telegram's SpamBot
+-
+-## Troubleshooting
+-
+-- **Bot Not Responding**: Make sure your API credentials are correct and your account is not limited
+-- **Messages Not Sending**: Check if the bot has the necessary permissions in the groups
+-- **Discord Webhook Not Working**: Verify that the webhook URL is correct and the webhook is not rate-limited
+-- **Telegram Logs Not Sending**: Make sure the specified username exists and is accessible to your account
+-
+-## License
+-
+-This project is licensed under the MIT License - see the LICENSE file for details.#   x 
+- 
+- 
+\ No newline at end of file
