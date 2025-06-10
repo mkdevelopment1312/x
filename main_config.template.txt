@@ -1,0 +1,19 @@
+[DEFAULT]
+# ======================
+# xaxa solutions config
+
+api_id = YOUR_API_ID
+api_hash = YOUR_API_HASH
+phone_number = YOUR_PHONE_NUMBER
+spam_enabled = on
+spam_delay_between_iterations = 60
+spam_delay_between_messages = 5
+welcome_enabled = off
+reply_enabled = on
+check_spambot = off
+check_spambot_delay = 21600
+hide_phone_number = on
+discord_enabled = off
+discord_webhook_url = 
+telegram_log_enabled = on
+telegram_log_user = YOUR_USERNAME
