@@ -1,4 +1,0 @@
-telethon
-pendulum
-aiohttp
-aiofiles

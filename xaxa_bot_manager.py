@@ -236,29 +236,43 @@ class XAXABotManager:
     async def setup_event_handlers(self):
         @self.client.on(events.ChatAction)
         async def handle_new_users(event):
-            if self.config['welcome_enabled'] != 'on' or not self.welcome_messages:
-                return
+            try:
+                if self.config['welcome_enabled'] != 'on' or not self.welcome_messages:
+                    return
 
-            if event.user_joined or event.user_added:
-                try:
-                    await asyncio.sleep(60)  # 60 seconds delay
-                    chat_id, msg_id = random.choice(self.welcome_messages)
-                    await self.client.forward_messages(event.chat_id, msg_id, chat_id)
-                    await self.log_message(f"Forwarded welcome message in {event.chat_id}", "INFO")
-                except Exception as e:
-                    await self.log_message(f"Failed to forward welcome message: {str(e)}", "ERROR")
+                if event.user_joined or event.user_added:
+                    try:
+                        await asyncio.sleep(60)  # 60 seconds delay
+                        if not self.welcome_messages:
+                            await self.log_message("No welcome messages set", "WARNING")
+                            return
+
+                        chat_id, msg_id = random.choice(self.welcome_messages)
+                        await self.client.forward_messages(event.chat_id, msg_id, chat_id)
+                        await self.log_message(f"Forwarded welcome message in {event.chat_id}", "INFO")
+                    except Exception as e:
+                        await self.log_message(f"Failed to forward welcome message: {str(e)}", "ERROR")
+            except Exception as e:
+                await self.log_message(f"Error in handle_new_users: {str(e)}", "ERROR")
 
         @self.client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
         async def handle_private_messages(event):
-            if self.config['reply_enabled'] != 'on' or not self.reply_messages:
-                return
-
             try:
-                chat_id, msg_id = random.choice(self.reply_messages)
-                await self.client.forward_messages(event.sender_id, msg_id, chat_id)
-                await self.log_message(f"Forwarded auto-reply to {event.sender_id}", "INFO")
+                if self.config['reply_enabled'] != 'on':
+                    return
+
+                if not self.reply_messages:
+                    await self.log_message("Auto-reply enabled but no reply messages set", "WARNING")
+                    return
+
+                try:
+                    chat_id, msg_id = random.choice(self.reply_messages)
+                    await self.client.forward_messages(event.sender_id, msg_id, chat_id)
+                    await self.log_message(f"Forwarded auto-reply to {event.sender_id}", "INFO")
+                except Exception as e:
+                    await self.log_message(f"Failed to forward auto-reply: {str(e)}", "ERROR")
             except Exception as e:
-                await self.log_message(f"Failed to forward auto-reply: {str(e)}", "ERROR")
+                await self.log_message(f"Error in handle_private_messages: {str(e)}", "ERROR")
 
     async def log_message(self, message, level="INFO"):
         timestamp = pendulum.now().to_datetime_string()
@@ -523,28 +537,73 @@ class XAXABotManager:
         await event.reply(help_text)
 
     async def cmd_setmsg(self, event):
-        if event.is_reply:
-            replied_msg = await event.get_reply_message()
-            self.spam_message = (replied_msg.chat_id, replied_msg.id)
-            await event.reply("Spam message set successfully")
-        else:
-            await event.reply("Please reply to a message to set it as the spam message")
+        try:
+            if event.is_reply:
+                replied_msg = await event.get_reply_message()
+                # Store the message reference
+                self.spam_message = (replied_msg.chat_id, replied_msg.id)
+
+                # Make sure spam_enabled is on
+                if self.config['spam_enabled'] != 'on':
+                    self.config['spam_enabled'] = 'on'
+                    self.save_main_config()
+                    await event.reply("Spam message set successfully and spam enabled")
+                else:
+                    await event.reply("Spam message set successfully")
+
+                # Log the action
+                await self.log_message(f"Spam message set by {event.sender_id}", "INFO")
+            else:
+                await event.reply("Please reply to a message to set it as the spam message")
+        except Exception as e:
+            await self.log_message(f"Error in cmd_setmsg: {str(e)}", "ERROR")
+            await event.reply(f"Failed to set spam message: {str(e)}")
 
     async def cmd_setreply(self, event):
-        if event.is_reply:
-            replied_msg = await event.get_reply_message()
-            self.reply_messages = [(replied_msg.chat_id, replied_msg.id)]
-            await event.reply("Auto-reply message set successfully")
-        else:
-            await event.reply("Please reply to a message to set it as the auto-reply message")
+        try:
+            if event.is_reply:
+                replied_msg = await event.get_reply_message()
+                # Store the message reference
+                self.reply_messages = [(replied_msg.chat_id, replied_msg.id)]
+
+                # Make sure reply_enabled is on
+                if self.config['reply_enabled'] != 'on':
+                    self.config['reply_enabled'] = 'on'
+                    self.save_main_config()
+                    await event.reply("Auto-reply message set successfully and auto-reply enabled")
+                else:
+                    await event.reply("Auto-reply message set successfully")
+
+                # Log the action
+                await self.log_message(f"Auto-reply message set by {event.sender_id}", "INFO")
+            else:
+                await event.reply("Please reply to a message to set it as the auto-reply message")
+        except Exception as e:
+            await self.log_message(f"Error in cmd_setreply: {str(e)}", "ERROR")
+            await event.reply(f"Failed to set auto-reply message: {str(e)}")
 
     async def cmd_setwelcome(self, event):
-        if event.is_reply:
-            replied_msg = await event.get_reply_message()
-            self.welcome_messages = [(replied_msg.chat_id, replied_msg.id)]
-            await event.reply("Welcome message set successfully")
-        else:
-            await event.reply("Please reply to a message to set it as the welcome message")
+        try:
+            if event.is_reply:
+                replied_msg = await event.get_reply_message()
+                # Store the message reference
+                self.welcome_messages = [(replied_msg.chat_id, replied_msg.id)]
+
+                # Make sure welcome_enabled is on
+                if self.config['welcome_enabled'] != 'on':
+                    self.config['welcome_enabled'] = 'on'
+                    self.save_main_config()
+                    await event.reply("Welcome message set successfully and welcome messages enabled")
+                else:
+                    await event.reply("Welcome message set successfully")
+
+                # Log the action
+                await self.log_message(f"Welcome message set by {event.sender_id}", "INFO")
+            else:
+                await event.reply("Please reply to a message to set it as the welcome message")
+        except Exception as e:
+            await self.log_message(f"Error in cmd_setwelcome: {str(e)}", "ERROR")
+            await event.reply(f"Failed to set welcome message: {str(e)}")
 
     async def cmd_set(self, event):
         args = event.text.split(maxsplit=2)
@@ -769,13 +828,13 @@ class XAXABotManager:
     async def process_command(self, event):
         # Check if event.text exists and is not empty
         if not event.text or not event.text.strip():
-            self.log_message(f"Received empty message event: {event}", level="DEBUG")
+            await self.log_message(f"Received empty message event: {event}", level="DEBUG")
             return False
 
         # Split the text and check if there are any parts
         parts = event.text.split()
         if not parts:
-            self.log_message(f"Message split resulted in empty list: {event.text}", level="DEBUG")
+            await self.log_message(f"Message split resulted in empty list: {event.text}", level="DEBUG")
             return False
 
         text = parts[0].lower()
@@ -791,31 +850,47 @@ class XAXABotManager:
         return False
 
 async def main():
-    bot = XAXABotManager()
-
-    # Always use interactive login to ensure proper sequence of credential input
-    await bot.interactive_login()
-
-    @bot.client.on(events.NewMessage(outgoing=True))
-    async def command_handler(event):
+    while True:
         try:
-            await bot.process_command(event)
+            bot = XAXABotManager()
+
+            # Always use interactive login to ensure proper sequence of credential input
+            await bot.interactive_login()
+
+            @bot.client.on(events.NewMessage(outgoing=True))
+            async def command_handler(event):
+                try:
+                    await bot.process_command(event)
+                except Exception as e:
+                    await bot.log_message(f"Error in command_handler: {str(e)}", level="ERROR")
+                    # Log additional debug information
+                    if hasattr(event, 'text'):
+                        await bot.log_message(f"Message that caused error: '{event.text}'", level="DEBUG")
+                    else:
+                        await bot.log_message(f"Event without text attribute: {event}", level="DEBUG")
+
+            print("XAXABotManager is running. Press Ctrl+C to stop.")
+
+            try:
+                await bot.client.run_until_disconnected()
+            except KeyboardInterrupt:
+                if bot.running:
+                    await bot.stop()
+                print("Bot stopped by user")
+                break
+            except Exception as e:
+                print(f"Critical error: {str(e)}")
+                print("Bot will restart in 10 seconds...")
+                if bot.running:
+                    try:
+                        await bot.stop()
+                    except Exception as e:
+                        print(f"Error stopping bot: {str(e)}")
+                await asyncio.sleep(10)
         except Exception as e:
-            bot.log_message(f"Error in command_handler: {str(e)}", level="ERROR")
-            # Log additional debug information
-            if hasattr(event, 'text'):
-                bot.log_message(f"Message that caused error: '{event.text}'", level="DEBUG")
-            else:
-                bot.log_message(f"Event without text attribute: {event}", level="DEBUG")
-
-    print("XAXABotManager is running. Press Ctrl+C to stop.")
-
-    try:
-        await bot.client.run_until_disconnected()
-    except KeyboardInterrupt:
-        if bot.running:
-            await bot.stop()
-        print("Bot stopped by user")
+            print(f"Initialization error: {str(e)}")
+            print("Retrying in 30 seconds...")
+            await asyncio.sleep(30)
 
 if __name__ == "__main__":
     asyncio.run(main())

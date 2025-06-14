@@ -5,8 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4428cc8a-ad0d-46bd-bd07-f8a02f122205" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/main_config.txt" beforeDir="false" afterPath="$PROJECT_DIR$/main_config.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,6 +18,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;mkdevelopment1312&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/mkdevelopment1312/x.git&quot;,
+    &quot;accountId&quot;: &quot;41fceaa0-1c6f-4dbb-a24d-37c829f20aa8&quot;
+  }
+}</component>
   <component name="PhpDebugGeneral" listening_started="true" />
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 7
@@ -64,7 +75,8 @@
       <updated>1749578740037</updated>
       <workItem from="1749578742423" duration="247000" />
       <workItem from="1749579587502" duration="20000" />
-      <workItem from="1749580030972" duration="13931000" />
+      <workItem from="1749580030972" duration="16621000" />
+      <workItem from="1749652837215" duration="16000" />
     </task>
     <servers />
   </component>
