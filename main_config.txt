@@ -2,9 +2,9 @@
 # ======================
 # xaxa solutions config
 
-api_id = 23137919
-api_hash = 3e1545f133ec7fa91cb235b4834a36c7
-phone_number = +48694329938
+api_id = 21345828
+api_hash = 06be6c61905a5561348e3a3c51f2b57b
+phone_number = +48669095482
 spam_enabled = on
 spam_delay_between_iterations = 60
 spam_delay_between_messages = 5
@@ -17,3 +17,4 @@ discord_enabled = off
 discord_webhook_url = 
 telegram_log_enabled = on
 telegram_log_user = marlboro_pln
+aggressive_mode = off
